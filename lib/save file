@@ -1,0 +1,557 @@
+// ignore_for_file: use_build_context_synchronously, prefer_const_constructors
+
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart';
+import 'package:tracking/homepage.dart';
+import 'package:validators/validators.dart';
+
+class loginScreen extends StatefulWidget {
+  const loginScreen({Key? key}) : super(key: key);
+
+  @override
+  State<loginScreen> createState() => _loginScreenState();
+}
+
+class _loginScreenState extends State<loginScreen> {
+  TextEditingController _emailController = TextEditingController();
+  TextEditingController _passwordController = TextEditingController();
+
+  bool isEmailCorrect = false;
+  final _formKey = GlobalKey<FormState>();
+
+  void _login(String email, password) async {
+    final String apiUrl = 'http://127.0.0.1:8000/api/auth/login';
+
+    try {
+      final response = await post(
+        Uri.parse(apiUrl),
+        body: {
+          'email': _emailController.text,
+          'password': _passwordController.text,
+        },
+      );
+
+      print('API Response: ${response.body}');
+
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseData['code'] == 200) {
+        // If the login is successful, navigate to mainPage
+        print('Login successful! Navigating to mainPage.');
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => Homepage()),
+        );
+      } else if (response.statusCode == 401) {
+        // If the login fails due to invalid email or password
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invalid email or password. Please try again.'),
+          ),
+        );
+      } else {
+        // If there's an unexpected error or login failure, check the response for more details
+        final String errorMessage = responseData['message'] ?? 'Login failed';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } catch (e) {
+      // Handle exceptions
+      print('Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred. Please try again later.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.blueAccent,
+      body: Container(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Log In',
+                    style:TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 30,
+                        color: Colors.white,
+
+                      ),
+                    ),
+                  
+                  Text(
+                    'Please login to continue using our app',
+                    style:TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Colors.white.withOpacity(0.5),
+                      ),
+                    ),
+                  
+                  const SizedBox(
+                    height: 30,
+                  ),
+                  Container(
+                    height: isEmailCorrect ? 280 : 200,
+                    width: MediaQuery.of(context).size.width / 1.1,
+                    decoration: BoxDecoration(
+                      // color: const Color.fromARGB(255, 101, 97, 97)
+                      //     .withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: 20,
+                            right: 20,
+                            bottom: 20,
+                            top: 20,
+                          ),
+                          child: TextFormField(
+                            controller: _emailController,
+                            onChanged: (val) {
+                              setState(() {
+                                isEmailCorrect = isEmail(val);
+                              });
+                            },
+                            decoration: const InputDecoration(
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide.none,
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10)),
+                              ),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide.none,
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10)),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.person,
+                                color: Color.fromARGB(255, 34, 73, 228),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              labelText: "Email",
+                              hintText: 'your-email@domain.com',
+                              labelStyle: TextStyle(
+                                color: Color.fromARGB(255, 34, 73, 228),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 20, right: 20),
+                          child: Form(
+                            key: _formKey,
+                            child: TextFormField(
+                              obscuringCharacter: '*',
+                              obscureText: true,
+                              controller: _passwordController,
+                              decoration: const InputDecoration(
+                                focusedBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide.none,
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(10)),
+                                ),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide.none,
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(10)),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.key,
+                                  color: Color.fromARGB(255, 34, 73, 228),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                labelText: "Password",
+                                hintText: '*********',
+                                labelStyle: TextStyle(
+                                  color: Color.fromARGB(255, 34, 73, 228),
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value!.isEmpty || value.length < 5) {
+                                  return 'Enter a valid password';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          height: 20,
+                        ),
+                        isEmailCorrect
+                            ? ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.0),
+                                  ),
+                                  backgroundColor: isEmailCorrect == false
+                                      ? Colors.red
+                                      : Colors.amber,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 131,
+                                    vertical: 20,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  if (_formKey.currentState!.validate()) {
+                                    _login(
+                                        _emailController.text,
+                                        _passwordController
+                                            .text); // Call the login function
+                                  }
+                                },
+                                child:
+                                    Text(
+                                      'LOG IN',
+                                      style: TextStyle(fontSize: 17,fontWeight: FontWeight.bold),
+                                    ),
+                              )
+                            : Container(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+
+
+
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+
+class TestPrint extends StatelessWidget {
+  const TestPrint({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return PdfPreview(
+      build: (format) => _generatePdf(format),
+    );
+  }
+
+  Future<Uint8List> _generatePdf(PdfPageFormat format) async {
+    final pdf = pw.Document(version: PdfVersion.pdf_1_5, compress: true);
+    final font = await PdfGoogleFonts.nunitoExtraLight();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: format,
+        build: (context) {
+          return pw.Column(
+            children: [
+              pw.SizedBox(
+                width: double.infinity,
+                child: pw.FittedBox(
+                  child:
+                      pw.Text('Printing Demo', style: pw.TextStyle(font: font)),
+                ),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Flexible(child: pw.FlutterLogo())
+            ],
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+}
+
+
+
+// Home Page 
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:tracking/welcome.dart';
+
+class Homepage extends StatefulWidget {
+  @override
+  _HomepageState createState() => _HomepageState();
+}
+
+class _HomepageState extends State<Homepage> {
+  List<dynamic> _produkList = [];
+  List<bool> _printedStatusList = [];
+
+  Future<void> _fetchData() async {
+    final response =
+        await http.get(Uri.parse("https://fakestoreapi.com/products"));
+    if (response.statusCode == 200) {
+      setState(() {
+        _produkList = json.decode(response.body);
+        _printedStatusList =
+            List.generate(_produkList.length, (index) => false);
+      });
+    } else {
+      throw Exception('Failed to load data');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  void _printProdukInfo(int index) {
+    print('ID: ${_produkList[index]['id']}');
+    print('Title: ${_produkList[index]['title']}');
+    print('Image: ${_produkList[index]['image']}');
+    // Tambahkan informasi tambahan yang ingin dicetak
+    setState(() {
+      _printedStatusList[index] = true;
+    });
+
+    // Tampilkan dialog konfirmasi pencetakan
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Print Confirmation'),
+          content: Text('Print data produk?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _generatePdf(index).then((pdf) {
+                  Printing.layoutPdf(onLayout: (_) => pdf);
+                });
+                Navigator.of(context).pop();
+              },
+              child: Text('Print'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<Uint8List> _generatePdf(int index) async {
+    final pdf = pw.Document();
+    final font = await pw.Font.ttf((await PdfGoogleFonts.nunitoExtraLight()) as ByteData);
+
+    pdf.addPage(
+      pw.Page(
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('ID: ${_produkList[index]['id']}',
+                  style: pw.TextStyle(font: font)),
+              pw.Text('Title: ${_produkList[index]['title']}',
+                  style: pw.TextStyle(font: font)),
+            ],
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Trucking'),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => WelcomeScreen(),
+                ),
+              );
+            },
+            icon: Icon(Icons.logout),
+          ),
+        ],
+      ),
+      body: _produkList.isEmpty
+          ? Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              itemCount: _produkList.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text('ID: ${_produkList[index]['id']}'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Title: ${_produkList[index]['title']}'),
+                      SizedBox(height: 8),
+                      Image.network(
+                        _produkList[index]['image'],
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
+                      SizedBox(height: 8),
+                      Container(
+                        color: _printedStatusList[index]
+                            ? Colors.green
+                            : Colors.yellow,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            _printedStatusList[index]
+                                ? 'Sudah Print'
+                                : 'Belum Print',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  trailing: _printedStatusList[index]
+                      ? ElevatedButton(
+                          onPressed: null,
+                          child: Text('Printed'),
+                          style:
+                              ElevatedButton.styleFrom(primary: Colors.green),
+                        )
+                      : ElevatedButton(
+                          onPressed: () {
+                            _printProdukInfo(index);
+                          },
+                          child: Text('Print'),
+                        ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+
+// Main
+import 'package:flutter/material.dart';
+
+import 'homepage.dart';
+
+void main() => runApp(TestPrintApp());
+
+class TestPrintApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'TruckAPK',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      debugShowCheckedModeBanner: false,
+      // Tentukan route untuk TestPrint
+      routes: {
+        '/': (context) => Homepage(), // route default
+      },
+    );
+  }
+}
+
+// Main Login
+import 'package:flutter/material.dart';
+import 'welcome.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: WelcomeScreen(),
+    );
+  }
+}
+
+
+// Preview 
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+
+class TestPrint extends StatelessWidget {
+  const TestPrint({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return PdfPreview(
+      build: (format) => _generatePdf(format),
+    );
+  }
+
+  Future<Uint8List> _generatePdf(PdfPageFormat format) async {
+    final pdf = pw.Document(version: PdfVersion.pdf_1_5, compress: true);
+    final font = await PdfGoogleFonts.nunitoExtraLight();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: format,
+        build: (context) {
+          return pw.Column(
+            children: [
+              pw.SizedBox(
+                width: double.infinity,
+                child: pw.FittedBox(
+                  child:
+                      pw.Text('Printing Demo', style: pw.TextStyle(font: font)),
+                ),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Flexible(child: pw.FlutterLogo())
+            ],
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+}
